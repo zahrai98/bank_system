@@ -24,20 +24,18 @@ public class TransactionDepositStrategy implements TransactionStrategy<Transacti
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Callable<Boolean> createTransaction(TransactionDepositDto transactionData) {
-        return () -> {
-            TransactionEntity transaction = new TransactionEntity();
-            transaction.setTransactionType(TransactionType.DEPOSIT);
-            transaction.setTransactionAction(TransactionAction.INCREASE);
-            transaction.setAmount(transactionData.getAmount());
-            transaction.setAccount(transactionData.getDestinationAccount());
-            transaction.setCreatedAt(LocalDateTime.now());
-            transactionRepository.save(transaction);
+    public Boolean createTransaction(TransactionDepositDto transactionData) {
+        TransactionEntity transaction = new TransactionEntity();
+        transaction.setTransactionType(TransactionType.DEPOSIT);
+        transaction.setTransactionAction(TransactionAction.INCREASE);
+        transaction.setAmount(transactionData.getAmount());
+        transaction.setAccount(transactionData.getDestinationAccount());
+        transaction.setCreatedAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
 
-            TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transaction);
-            transactionsService.notifyObservers(logMessage);
-            return true;
-        };
+        TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transaction);
+        transactionsService.notifyObservers(logMessage);
+        return true;
     }
 
 }

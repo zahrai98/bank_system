@@ -25,20 +25,19 @@ public class TransactionWithdrawStrategy implements TransactionStrategy<Transact
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Callable<Boolean> createTransaction(TransactionWithdrawDto transactionData) {
-        return () -> {
-            TransactionEntity transaction = new TransactionEntity();
-            transaction.setTransactionType(TransactionType.WITHDRAW);
-            transaction.setTransactionAction(TransactionAction.DECREASE);
-            transaction.setAmount(transactionData.getAmount());
-            transaction.setAccount(transactionData.getSourceAccount());
-            transaction.setCreatedAt(LocalDateTime.now());
-            transactionRepository.save(transaction);
+    public Boolean createTransaction(TransactionWithdrawDto transactionData) {
+        TransactionEntity transaction = new TransactionEntity();
+        transaction.setTransactionType(TransactionType.WITHDRAW);
+        transaction.setTransactionAction(TransactionAction.DECREASE);
+        transaction.setAmount(transactionData.getAmount());
+        transaction.setAccount(transactionData.getSourceAccount());
+        transaction.setCreatedAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
 
-            TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transaction);
-            transactionsService.notifyObservers(logMessage);
-            return true;
-        };
+        TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transaction);
+        transactionsService.notifyObservers(logMessage);
+        return true;
+
     }
 
 }

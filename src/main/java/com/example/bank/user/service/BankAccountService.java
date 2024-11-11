@@ -64,9 +64,9 @@ public class BankAccountService {
     public boolean depositBankAccount(TransactionDepositInDto transactionDepositInDto) throws ExecutionException, InterruptedException {
         Callable<Boolean> deposit = () -> {
             BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(transactionDepositInDto.getDestinationAccountId());
-            transactionService.makeTransaction(transactionDepositStrategy, new TransactionDepositDto(transactionDepositInDto.getAmount(), bankAccountEntity));
             bankAccountEntity.setBalance(bankAccountEntity.getBalance() + transactionDepositInDto.getAmount());
             bankAccountRepository.save(bankAccountEntity);
+            transactionService.makeTransaction(transactionDepositStrategy, new TransactionDepositDto(transactionDepositInDto.getAmount(), bankAccountEntity));
             return Boolean.TRUE;
         };
         return executorCallerService.execute(deposit).get();

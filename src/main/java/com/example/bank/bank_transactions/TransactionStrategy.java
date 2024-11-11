@@ -4,6 +4,6 @@ import java.util.concurrent.Callable;
 
 public interface TransactionStrategy<T> {
 
-    public Callable<Boolean> createTransaction(T transactionData);
+    public Boolean createTransaction(T transactionData);
 
 }

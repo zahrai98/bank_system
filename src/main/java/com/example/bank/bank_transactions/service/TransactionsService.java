@@ -28,8 +28,8 @@ public class TransactionsService extends Subject {
 
     @Transactional(rollbackFor = Exception.class)
     public <T> void makeTransaction(TransactionStrategy<T> strategy, T transactionDto) {
-        Callable<Boolean> transactionCallable = strategy.createTransaction(transactionDto);
-        executorCallerService.execute(transactionCallable);
+        Boolean transactionCallable= strategy.createTransaction(transactionDto);
+//        executorCallerService.execute(transactionCallable);
     }
 
     public List<TransactionOutDto> getAllByAccountId(PageableDto pageableDto, Long accountId) {
