@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class TransactionOutDto {
-    private Long accountId;
     private LocalDateTime createdAt;
     private Integer amount;
     private TransactionAction transactionAction;
@@ -23,7 +22,6 @@ public class TransactionOutDto {
 
     public TransactionOutDto(TransactionEntity transactionEntity) {
         if (transactionEntity != null) {
-            this.setAccountId(transactionEntity.getAccount().getId());
             this.setCreatedAt(transactionEntity.getCreatedAt());
             this.setAmount(transactionEntity.getAmount());
             this.setTransactionAction(transactionEntity.getTransactionAction());

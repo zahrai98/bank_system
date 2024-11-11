@@ -1,5 +1,6 @@
 package com.example.bank.bank_transactions.model.dto;
 
+import com.example.bank.user.model.BankAccountEntity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -8,14 +9,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-
-
 @Setter
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TransactionInDto {
+public class TransactionTransferDto {
     @NotNull
     private Integer amount;
+    private BankAccountEntity sourceAccount;
+    private BankAccountEntity destinationAccount;
 }

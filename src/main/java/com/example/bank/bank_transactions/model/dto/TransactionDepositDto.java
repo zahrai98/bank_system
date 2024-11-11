@@ -1,21 +1,21 @@
 package com.example.bank.bank_transactions.model.dto;
 
+import com.example.bank.user.model.BankAccountEntity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
 @Setter
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TransferTransactionInDto extends TransactionInDto {
-    @NotBlank
+public class TransactionDepositDto {
     @NotNull
-    private Long sourceAccountId;
-    @NotBlank
-    @NotNull
-    private Long destinationAccountId;
+    @Size(min = 1)
+    private Integer amount;
+    private BankAccountEntity destinationAccount;
 }

@@ -18,5 +18,5 @@ public abstract class Subject {
         observers.remove(observer);
     }
 
-    protected abstract void notifyObservers(Object data);
+    public abstract void notifyObservers(Object data);
 }

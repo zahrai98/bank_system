@@ -1,9 +1,10 @@
 package com.example.bank.user.service;
 
 
-import com.example.bank.bank_transactions.model.dto.TransactionInDto;
-import com.example.bank.bank_transactions.model.dto.TransactionOutDto;
-import com.example.bank.bank_transactions.model.dto.TransferTransactionInDto;
+import com.example.bank.bank_transactions.TransactionDepositStrategy;
+import com.example.bank.bank_transactions.TransactionTransferStrategy;
+import com.example.bank.bank_transactions.TransactionWithdrawStrategy;
+import com.example.bank.bank_transactions.model.dto.*;
 import com.example.bank.bank_transactions.model.enums.TransactionAction;
 import com.example.bank.bank_transactions.model.enums.TransactionType;
 import com.example.bank.bank_transactions.service.TransactionsService;
@@ -18,8 +19,6 @@ import com.example.bank.user.repository.BankAccountRepository;
 import com.example.bank.user.repository.UserRepository;
 import lombok.AllArgsConstructor;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +38,10 @@ public class BankAccountService {
     private final UserRepository userRepository;
     private final TransactionsService transactionService;
     private final ExecutorCallerService executorCallerService;
+    private final TransactionDepositStrategy transactionDepositStrategy;
+    private final TransactionWithdrawStrategy transactionWithdrawStrategy;
+    private final TransactionTransferStrategy transactionTransferStrategy;
+
 
     public BankAccountOut getByUserId(Long userId) {
         return new BankAccountOut(bankAccountRepository.getByUserId(userId));
@@ -58,38 +61,37 @@ public class BankAccountService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean depositBankAccount(Long accountId, TransactionInDto transactionInDto) throws ExecutionException, InterruptedException {
+    public boolean depositBankAccount(TransactionDepositInDto transactionDepositInDto) throws ExecutionException, InterruptedException {
         Callable<Boolean> deposit = () -> {
-            BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(accountId);
-            transactionService.makeTransaction(bankAccountEntity, transactionInDto.getAmount(),
-                    TransactionAction.INCREASE, TransactionType.DEPOSIT);
+            BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(transactionDepositInDto.getDestinationAccountId());
+            transactionService.makeTransaction(transactionDepositStrategy, new TransactionDepositDto(transactionDepositInDto.getAmount(), bankAccountEntity));
+            bankAccountEntity.setBalance(bankAccountEntity.getBalance() + transactionDepositInDto.getAmount());
+            bankAccountRepository.save(bankAccountEntity);
             return Boolean.TRUE;
         };
         return executorCallerService.execute(deposit).get();
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean withdrawBankAccount(Long accountId, TransactionInDto transactionInDto) throws ExecutionException, InterruptedException {
+    public boolean withdrawBankAccount(TransactionWithdrawInDto transactionWithdrawInDto) throws ExecutionException, InterruptedException {
         Callable<Boolean> withdraw = () -> {
-            BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(accountId);
+            BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(transactionWithdrawInDto.getSourceAccountId());
             Integer accountBalance = bankAccountEntity.getBalance();
-            if (accountBalance.compareTo(transactionInDto.getAmount()) >= 0) {
-                transactionService.makeTransaction(bankAccountEntity, transactionInDto.getAmount(),
-                        TransactionAction.DECREASE, TransactionType.WITHDRAW);
+            if (accountBalance.compareTo(transactionWithdrawInDto.getAmount()) >= 0) {
+                transactionService.makeTransaction(transactionWithdrawStrategy, new TransactionWithdrawDto(transactionWithdrawInDto.getAmount(), bankAccountEntity));
             } else {
                 throw new SystemException(HttpStatus.BAD_REQUEST, "insufficient balance", 400);
             }
             return Boolean.TRUE;
         };
-
         return executorCallerService.execute(withdraw).get();
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean transferBankAccount(TransferTransactionInDto transferTransactionInDto) throws ExecutionException, InterruptedException {
+    public boolean transferBankAccount(TransactionTransferInDto transactionTransferInDto) throws ExecutionException, InterruptedException {
         Callable<Boolean> transfer = () -> {
             List<BankAccountEntity> bankAccounts = bankAccountRepository.findTwoAccountByIdWithLock(
-                    transferTransactionInDto.getSourceAccountId(), transferTransactionInDto.getDestinationAccountId());
+                    transactionTransferInDto.getSourceAccountId(), transactionTransferInDto.getDestinationAccountId());
 
             if (bankAccounts.size() != 2) {
                 throw new SystemException(HttpStatus.NOT_FOUND, "accounts not found", 404);
@@ -98,7 +100,7 @@ public class BankAccountService {
             BankAccountEntity destinationBankAccount = bankAccounts.get(0);
 
             Long accountId = bankAccounts.get(0).getId();
-            if (accountId.equals(transferTransactionInDto.getSourceAccountId())) {
+            if (accountId.equals(transactionTransferInDto.getSourceAccountId())) {
                 sourceBankAccount = bankAccounts.get(0);
                 destinationBankAccount = bankAccounts.get(1);
             } else {
@@ -108,11 +110,9 @@ public class BankAccountService {
 
             Integer sourceAccountBalance = sourceBankAccount.getBalance();
 
-            if (sourceAccountBalance.compareTo(transferTransactionInDto.getAmount()) >= 0) {
-                transactionService.makeTransaction(sourceBankAccount, transferTransactionInDto.getAmount(),
-                        TransactionAction.DECREASE, TransactionType.TRANSFER);
-                transactionService.makeTransaction(destinationBankAccount, transferTransactionInDto.getAmount(),
-                        TransactionAction.INCREASE, TransactionType.TRANSFER);
+            if (sourceAccountBalance.compareTo(transactionTransferInDto.getAmount()) >= 0) {
+                transactionService.makeTransaction(transactionTransferStrategy,
+                        new TransactionTransferDto(transactionTransferInDto.getAmount(), sourceBankAccount, destinationBankAccount));
             } else {
                 throw new SystemException(HttpStatus.BAD_REQUEST, "insufficient balance", 400);
             }

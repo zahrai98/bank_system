@@ -12,6 +12,6 @@ import java.util.List;
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
 
-    @Query(value = "select t from TransactionEntity t JOIN t.account a on a.id = :accountId and t.account.id = :accountId order by t.createdAt desc")
+    @Query(value = "select t from TransactionEntity t WHERE t.account.id = :accountId order by t.createdAt desc")
     List<TransactionEntity> getAllByAccountId(Long accountId, Pageable pageable);
 }

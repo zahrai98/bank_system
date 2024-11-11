@@ -1,15 +1,12 @@
 package com.example.bank.user.controller;
 
 
-import com.example.bank.bank_transactions.model.dto.TransactionInDto;
-import com.example.bank.bank_transactions.model.dto.TransactionOutDto;
-import com.example.bank.bank_transactions.model.dto.TransferTransactionInDto;
+import com.example.bank.bank_transactions.model.dto.*;
 import com.example.bank.common.dto.PageableDto;
 import com.example.bank.user.model.dto.BankAccountIn;
 import com.example.bank.user.model.dto.BankAccountOut;
 import com.example.bank.user.service.BankAccountService;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.ServletResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-@Tag(name = "Account Controller")
 @Validated
 @AllArgsConstructor
 @RestController
@@ -45,21 +41,19 @@ public class BankAccountController {
         return ResponseEntity.ok(bankAccountService.create(userId, bankAccountIn));
     }
 
-    @PutMapping("/{accountId}/deposit")
-    public ResponseEntity<Boolean> deposit(@Valid @RequestBody TransactionInDto transactionInDto,
-                                           @PathVariable(name = "accountId") Long accountId) throws ExecutionException, InterruptedException {
-        return ResponseEntity.ok(bankAccountService.depositBankAccount(accountId, transactionInDto));
+    @PutMapping("/deposit")
+    public ResponseEntity<Boolean> deposit(@Valid @RequestBody TransactionDepositInDto transactionDepositInDto) throws ExecutionException, InterruptedException {
+        return ResponseEntity.ok(bankAccountService.depositBankAccount(transactionDepositInDto));
     }
 
-    @PutMapping("/{accountId}/withdraw")
-    public ResponseEntity<Boolean> withdraw(@Valid @RequestBody TransactionInDto transactionInDto,
-                                            @PathVariable(name = "accountId") Long accountId) throws ExecutionException, InterruptedException {
-        return ResponseEntity.ok(bankAccountService.withdrawBankAccount(accountId, transactionInDto));
+    @PutMapping("/withdraw")
+    public ResponseEntity<Boolean> withdraw(@Valid @RequestBody TransactionWithdrawInDto transactionWithdrawInDto) throws ExecutionException, InterruptedException {
+        return ResponseEntity.ok(bankAccountService.withdrawBankAccount(transactionWithdrawInDto));
     }
 
     @PutMapping("/transfer")
-    public ResponseEntity<Boolean> transfer(@Valid @RequestBody TransferTransactionInDto transferTransactionInDto) throws ExecutionException, InterruptedException {
-        return ResponseEntity.ok(bankAccountService.transferBankAccount(transferTransactionInDto));
+    public ResponseEntity<Boolean> transfer(@Valid @RequestBody TransactionTransferInDto transactionTransferInDto) throws ExecutionException, InterruptedException {
+        return ResponseEntity.ok(bankAccountService.transferBankAccount(transactionTransferInDto));
     }
 
     @GetMapping(path = "/{accountId}/transactions")
