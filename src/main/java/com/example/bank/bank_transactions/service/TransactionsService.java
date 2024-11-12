@@ -11,6 +11,7 @@ import com.example.bank.common.service.Subject;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
 
@@ -26,10 +27,9 @@ public class TransactionsService extends Subject {
     private final TransactionRepository transactionRepository;
     private final ExecutorCallerService executorCallerService;
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional( propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
     public <T> void makeTransaction(TransactionStrategy<T> strategy, T transactionDto) {
-        Boolean transactionCallable= strategy.createTransaction(transactionDto);
-//        executorCallerService.execute(transactionCallable);
+        strategy.createTransaction(transactionDto);
     }
 
     public List<TransactionOutDto> getAllByAccountId(PageableDto pageableDto, Long accountId) {

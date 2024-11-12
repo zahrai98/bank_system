@@ -6,6 +6,7 @@ import com.example.bank.bank_transactions.TransactionTransferStrategy;
 import com.example.bank.bank_transactions.TransactionWithdrawStrategy;
 import com.example.bank.bank_transactions.model.dto.*;
 import com.example.bank.bank_transactions.model.enums.TransactionAction;
+import com.example.bank.bank_transactions.model.enums.TransactionStatus;
 import com.example.bank.bank_transactions.model.enums.TransactionType;
 import com.example.bank.bank_transactions.service.TransactionsService;
 import com.example.bank.common.dto.PageableDto;
@@ -19,13 +20,18 @@ import com.example.bank.user.repository.BankAccountRepository;
 import com.example.bank.user.repository.UserRepository;
 import lombok.AllArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -41,6 +47,7 @@ public class BankAccountService {
     private final TransactionDepositStrategy transactionDepositStrategy;
     private final TransactionWithdrawStrategy transactionWithdrawStrategy;
     private final TransactionTransferStrategy transactionTransferStrategy;
+    private PlatformTransactionManager transactionManager;
 
 
     public BankAccountOut getByUserId(Long userId) {
@@ -54,72 +61,124 @@ public class BankAccountService {
         Callable<BankAccountOut> createCallable = () -> {
             BankAccountEntity bankAccountEntity = bankAccountIn.convertToEntity(null);
             bankAccountEntity.setUser(userEntity);
-            BankAccountEntity savedBankAccount = bankAccountRepository.save(bankAccountEntity);
             return new BankAccountOut(bankAccountRepository.save(bankAccountEntity));
         };
         return executorCallerService.execute(createCallable).get();
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    //    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
     public boolean depositBankAccount(TransactionDepositInDto transactionDepositInDto) throws ExecutionException, InterruptedException {
         Callable<Boolean> deposit = () -> {
-            BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(transactionDepositInDto.getDestinationAccountId());
-            bankAccountEntity.setBalance(bankAccountEntity.getBalance() + transactionDepositInDto.getAmount());
-            bankAccountRepository.save(bankAccountEntity);
-            transactionService.makeTransaction(transactionDepositStrategy, new TransactionDepositDto(transactionDepositInDto.getAmount(), bankAccountEntity));
-            return Boolean.TRUE;
+            TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+            return transactionTemplate.execute(status -> {
+                try {
+                    BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(transactionDepositInDto.getDestinationAccountId());
+                    if (bankAccountEntity == null){
+                        throw new SystemException(HttpStatus.NOT_FOUND, "bank account not found", 404);
+                    }
+                    bankAccountEntity.setBalance(bankAccountEntity.getBalance() + transactionDepositInDto.getAmount());
+                    bankAccountRepository.save(bankAccountEntity);
+                    transactionService.makeTransaction(transactionDepositStrategy, new TransactionDepositDto(transactionDepositInDto.getAmount(), bankAccountEntity));
+
+                    return Boolean.TRUE;
+                } catch (Exception e) {
+                    System.out.println("*******************************************************");
+                    status.setRollbackOnly();
+                    TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transactionDepositInDto.getDestinationAccountId(),
+                            TransactionAction.INCREASE, TransactionType.DEPOSIT, transactionDepositInDto.getAmount(),
+                            LocalDateTime.now(), TransactionStatus.FAILED);
+                    transactionService.notifyObservers(logMessage);
+                    return Boolean.FALSE;
+//                    throw new SystemException(HttpStatus.NOT_ACCEPTABLE, "Transaction failed, rolling back.", 406);
+                }
+            });
         };
         return executorCallerService.execute(deposit).get();
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public boolean withdrawBankAccount(TransactionWithdrawInDto transactionWithdrawInDto) throws ExecutionException, InterruptedException {
+    public boolean withdrawBankAccount(TransactionWithdrawInDto transactionWithdrawInDto) throws
+            ExecutionException, InterruptedException {
         Callable<Boolean> withdraw = () -> {
-            BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(transactionWithdrawInDto.getSourceAccountId());
-            Integer accountBalance = bankAccountEntity.getBalance();
-            if (accountBalance.compareTo(transactionWithdrawInDto.getAmount()) >= 0) {
-                transactionService.makeTransaction(transactionWithdrawStrategy, new TransactionWithdrawDto(transactionWithdrawInDto.getAmount(), bankAccountEntity));
-            } else {
-                throw new SystemException(HttpStatus.BAD_REQUEST, "insufficient balance", 400);
-            }
-            return Boolean.TRUE;
+            TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+            return transactionTemplate.execute(status -> {
+                try {
+                    BankAccountEntity bankAccountEntity = bankAccountRepository.findAccountByIdWithLock(transactionWithdrawInDto.getSourceAccountId());
+                    if (bankAccountEntity == null){
+                        throw new SystemException(HttpStatus.NOT_FOUND, "bank account not found", 404);
+                    }
+                    if (bankAccountEntity.getBalance() >= transactionWithdrawInDto.getAmount()) {
+                        bankAccountEntity.setBalance(bankAccountEntity.getBalance() - transactionWithdrawInDto.getAmount());
+                    } else {throw new SystemException(HttpStatus.BAD_REQUEST, "insufficient balance", 400);}
+                    bankAccountRepository.save(bankAccountEntity);
+                    transactionService.makeTransaction(transactionWithdrawStrategy, new TransactionWithdrawDto(transactionWithdrawInDto.getAmount(), bankAccountEntity));
+
+                    return Boolean.TRUE;
+                } catch (Exception e) {
+                    System.out.println("*******************************************************");
+                    status.setRollbackOnly();
+                    TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transactionWithdrawInDto.getSourceAccountId(),
+                            TransactionAction.DECREASE, TransactionType.WITHDRAW, transactionWithdrawInDto.getAmount(),
+                            LocalDateTime.now(), TransactionStatus.FAILED);
+                    transactionService.notifyObservers(logMessage);
+                    return Boolean.FALSE;
+                }
+            });
         };
         return executorCallerService.execute(withdraw).get();
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public boolean transferBankAccount(TransactionTransferInDto transactionTransferInDto) throws ExecutionException, InterruptedException {
         Callable<Boolean> transfer = () -> {
-            List<BankAccountEntity> bankAccounts = bankAccountRepository.findTwoAccountByIdWithLock(
-                    transactionTransferInDto.getSourceAccountId(), transactionTransferInDto.getDestinationAccountId());
+            TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+            return transactionTemplate.execute(status -> {
+                try {
+                    List<BankAccountEntity> bankAccounts = bankAccountRepository.findTwoAccountByIdWithLock(
+                            transactionTransferInDto.getSourceAccountId(), transactionTransferInDto.getDestinationAccountId());
 
-            if (bankAccounts.size() != 2) {
-                throw new SystemException(HttpStatus.NOT_FOUND, "accounts not found", 404);
-            }
-            BankAccountEntity sourceBankAccount = bankAccounts.get(1);
-            BankAccountEntity destinationBankAccount = bankAccounts.get(0);
+                    if (bankAccounts.size() != 2) {
+                        throw new SystemException(HttpStatus.NOT_FOUND, "accounts not found", 404);
+                    }
+                    BankAccountEntity sourceBankAccount = bankAccounts.get(1);
+                    BankAccountEntity destinationBankAccount = bankAccounts.get(0);
 
-            Long accountId = bankAccounts.get(0).getId();
-            if (accountId.equals(transactionTransferInDto.getSourceAccountId())) {
-                sourceBankAccount = bankAccounts.get(0);
-                destinationBankAccount = bankAccounts.get(1);
-            } else {
-                sourceBankAccount = bankAccounts.get(1);
-                destinationBankAccount = bankAccounts.get(0);
-            }
+                    Long accountId = bankAccounts.get(0).getId();
+                    if (accountId.equals(transactionTransferInDto.getSourceAccountId())) {
+                        sourceBankAccount = bankAccounts.get(0);
+                        destinationBankAccount = bankAccounts.get(1);
+                    } else {
+                        sourceBankAccount = bankAccounts.get(1);
+                        destinationBankAccount = bankAccounts.get(0);
+                    }
 
-            Integer sourceAccountBalance = sourceBankAccount.getBalance();
+                    Integer sourceAccountBalance = sourceBankAccount.getBalance();
 
-            if (sourceAccountBalance.compareTo(transactionTransferInDto.getAmount()) >= 0) {
-                transactionService.makeTransaction(transactionTransferStrategy,
-                        new TransactionTransferDto(transactionTransferInDto.getAmount(), sourceBankAccount, destinationBankAccount));
-            } else {
-                throw new SystemException(HttpStatus.BAD_REQUEST, "insufficient balance", 400);
-            }
-            return Boolean.TRUE;
+                    if (sourceAccountBalance.compareTo(transactionTransferInDto.getAmount()) >= 0) {
+                        sourceBankAccount.setBalance(sourceBankAccount.getBalance() - transactionTransferInDto.getAmount());
+                        bankAccountRepository.save(sourceBankAccount);
+                        destinationBankAccount.setBalance(destinationBankAccount.getBalance() + transactionTransferInDto.getAmount());
+                        bankAccountRepository.save(destinationBankAccount);
+                        transactionService.makeTransaction(transactionTransferStrategy,
+                                new TransactionTransferDto(transactionTransferInDto.getAmount(), sourceBankAccount, destinationBankAccount));
+                    } else {
+                        throw new SystemException(HttpStatus.BAD_REQUEST, "insufficient balance", 400);
+                    }
+                    return Boolean.TRUE;
+                } catch (Exception e) {
+                    status.setRollbackOnly();
+                    TransactionLoggerMessageDto increaseTransaction = new TransactionLoggerMessageDto(transactionTransferInDto.getDestinationAccountId(),
+                            TransactionAction.INCREASE, TransactionType.TRANSFER, transactionTransferInDto.getAmount(),
+                            LocalDateTime.now(), TransactionStatus.FAILED);
+                    TransactionLoggerMessageDto decreaseTransaction = new TransactionLoggerMessageDto(transactionTransferInDto.getSourceAccountId(),
+                            TransactionAction.DECREASE, TransactionType.TRANSFER, transactionTransferInDto.getAmount(),
+                            LocalDateTime.now(), TransactionStatus.FAILED);
+                    transactionService.notifyObservers(increaseTransaction);
+                    transactionService.notifyObservers(decreaseTransaction);
+                    throw new SystemException(HttpStatus.NOT_ACCEPTABLE, "Transaction failed, rolling back.", 406);
+                }
+            });
         };
-
         return executorCallerService.execute(transfer).get();
+
     }
 
     public List<BankAccountOut> getAll(PageableDto pageableDto) {

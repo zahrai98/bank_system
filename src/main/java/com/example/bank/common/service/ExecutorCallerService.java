@@ -15,7 +15,6 @@ public class ExecutorCallerService {
 
     private ExecutorService executorService;
 
-    @Transactional(rollbackFor = Exception.class)
     public <T> Future<T> execute(Callable<T> callable) {
         return executorService.submit(callable);
     }

@@ -40,16 +40,16 @@ public class TransactionEntity {
 //    @JdbcTypeCode(SqlTypes.ENUM)
     @JdbcType(PostgreSQLEnumJdbcType.class)
     @Enumerated(value = EnumType.STRING)
-    @Column(name = "transaction_type", nullable = false)
+    @Column(name = "transaction_type")
     private TransactionType transactionType;
 
     @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "transaction_actions", nullable = false)
+    @Column(name = "transaction_action")
     @Enumerated(value = EnumType.STRING)
     private TransactionAction transactionAction;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", referencedColumnName = "id", nullable = false, insertable = false, updatable = false)
+    @JoinColumn(name = "account_id", referencedColumnName = "id")
     private BankAccountEntity account;
 
 }

@@ -9,6 +9,8 @@ import jakarta.annotation.PreDestroy;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Objects;
+import java.util.Optional;
 
 
 @Service
@@ -21,12 +23,21 @@ public class TransactionLoggerService implements Observer {
         if (message instanceof TransactionLoggerMessageDto transactionLoggerMessageDto) {
             try {
                 if (writer != null) {
-                    writer.write("Transaction log : transaction type: " +
-                                    transactionLoggerMessageDto.getTransactionType().name() +
-                                    " transaction action: " +
-                                    transactionLoggerMessageDto.getTransactionAction().name() +
-                            "  transaction amount: " +
-                                    transactionLoggerMessageDto.getAmount()
+                    String logMessage = "Transaction log : transaction ID: ";
+                    Long transactionId = transactionLoggerMessageDto.getTransactionId();
+                    logMessage += Objects.requireNonNullElse(transactionId, "unknown");
+
+                    writer.write(logMessage +
+                            " , account ID: " +
+                            transactionLoggerMessageDto.getAccountId() +
+                            " , transaction type: " +
+                            transactionLoggerMessageDto.getTransactionType().name() +
+                            " , transaction action: " +
+                            transactionLoggerMessageDto.getTransactionAction().name() +
+                            " , transaction amount: " +
+                            transactionLoggerMessageDto.getAmount() +
+                            " , transaction status: " +
+                            transactionLoggerMessageDto.getTransactionStatus().name()
                     );
                     writer.newLine();
                 }
