@@ -37,7 +37,7 @@ build/
 .vscode/
 
 ### configs ###
-application.properties
+#application.properties
 
 ### logs ###
 logs
