@@ -29,9 +29,6 @@ public interface BankAccountRepository extends JpaRepository<BankAccountEntity, 
     @Query(value = "select b from BankAccountEntity b where b.id = :accountId1 or b.id = :accountId2")
     List<BankAccountEntity> findTwoAccountByIdWithLock(Long accountId1, Long accountId2);
 
-//    @Query(value = "select b from BankAccountEntity b JOIN UserEntity b.user u where u.id = :userId")
-//    BankAccountEntity getByUserId(Long userId);
-
-    BankAccountEntity getByUserId(Long userId);
+    List<BankAccountEntity> getByUserId(Long userId);
 
 }

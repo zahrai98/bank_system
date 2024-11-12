@@ -24,13 +24,13 @@ public class BankAccountController {
 
     private final BankAccountService bankAccountService;
 
-    @GetMapping(path = "")
+    @GetMapping(path = "/")
     public ResponseEntity<List<BankAccountOut>> getAll(@Valid PageableDto pageableDto) {
         return ResponseEntity.ok(bankAccountService.getAll(pageableDto));
     }
 
     @GetMapping(path = "/{userId}")
-    public ResponseEntity<BankAccountOut> getByUserId(@PathVariable(name = "userId") Long userId) {
+    public ResponseEntity<List<BankAccountOut>> getByUserId(@PathVariable(name = "userId") Long userId) {
         return ResponseEntity.ok(bankAccountService.getByUserId(userId));
     }
 

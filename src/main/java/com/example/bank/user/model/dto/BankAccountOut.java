@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class BankAccountOut {
     private Long id;
     private String accountNumber;
-    private Integer balance;
+    private BigDecimal balance;
     private UserOut user;
 
     public BankAccountOut(BankAccountEntity bankAccountEntity) {

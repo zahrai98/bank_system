@@ -20,6 +20,7 @@ import com.example.bank.user.repository.BankAccountRepository;
 import com.example.bank.user.repository.UserRepository;
 import lombok.AllArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -50,8 +51,9 @@ public class BankAccountService {
     private PlatformTransactionManager transactionManager;
 
 
-    public BankAccountOut getByUserId(Long userId) {
-        return new BankAccountOut(bankAccountRepository.getByUserId(userId));
+    public List<BankAccountOut> getByUserId(Long userId) {
+        return bankAccountRepository.getByUserId(userId).stream().map(BankAccountOut::new).collect(Collectors.toList());
+
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -76,19 +78,18 @@ public class BankAccountService {
                     if (bankAccountEntity == null){
                         throw new SystemException(HttpStatus.NOT_FOUND, "bank account not found", 404);
                     }
-                    bankAccountEntity.setBalance(bankAccountEntity.getBalance() + transactionDepositInDto.getAmount());
+                    bankAccountEntity.setBalance(bankAccountEntity.getBalance().add(transactionDepositInDto.getAmount()));
                     bankAccountRepository.save(bankAccountEntity);
                     transactionService.makeTransaction(transactionDepositStrategy, new TransactionDepositDto(transactionDepositInDto.getAmount(), bankAccountEntity));
 
-                    return Boolean.TRUE;
+                    return true;
                 } catch (Exception e) {
-                    System.out.println("*******************************************************");
                     status.setRollbackOnly();
                     TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transactionDepositInDto.getDestinationAccountId(),
                             TransactionAction.INCREASE, TransactionType.DEPOSIT, transactionDepositInDto.getAmount(),
                             LocalDateTime.now(), TransactionStatus.FAILED);
                     transactionService.notifyObservers(logMessage);
-                    return Boolean.FALSE;
+                    return false;
 //                    throw new SystemException(HttpStatus.NOT_ACCEPTABLE, "Transaction failed, rolling back.", 406);
                 }
             });
@@ -106,21 +107,20 @@ public class BankAccountService {
                     if (bankAccountEntity == null){
                         throw new SystemException(HttpStatus.NOT_FOUND, "bank account not found", 404);
                     }
-                    if (bankAccountEntity.getBalance() >= transactionWithdrawInDto.getAmount()) {
-                        bankAccountEntity.setBalance(bankAccountEntity.getBalance() - transactionWithdrawInDto.getAmount());
+                    if (bankAccountEntity.getBalance().compareTo(transactionWithdrawInDto.getAmount()) >= 0) {
+                        bankAccountEntity.setBalance(bankAccountEntity.getBalance().subtract(transactionWithdrawInDto.getAmount()));
                     } else {throw new SystemException(HttpStatus.BAD_REQUEST, "insufficient balance", 400);}
                     bankAccountRepository.save(bankAccountEntity);
                     transactionService.makeTransaction(transactionWithdrawStrategy, new TransactionWithdrawDto(transactionWithdrawInDto.getAmount(), bankAccountEntity));
 
-                    return Boolean.TRUE;
+                    return true;
                 } catch (Exception e) {
-                    System.out.println("*******************************************************");
                     status.setRollbackOnly();
                     TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transactionWithdrawInDto.getSourceAccountId(),
                             TransactionAction.DECREASE, TransactionType.WITHDRAW, transactionWithdrawInDto.getAmount(),
                             LocalDateTime.now(), TransactionStatus.FAILED);
                     transactionService.notifyObservers(logMessage);
-                    return Boolean.FALSE;
+                    return false;
                 }
             });
         };
@@ -150,12 +150,12 @@ public class BankAccountService {
                         destinationBankAccount = bankAccounts.get(0);
                     }
 
-                    Integer sourceAccountBalance = sourceBankAccount.getBalance();
+                    BigDecimal sourceAccountBalance = sourceBankAccount.getBalance();
 
                     if (sourceAccountBalance.compareTo(transactionTransferInDto.getAmount()) >= 0) {
-                        sourceBankAccount.setBalance(sourceBankAccount.getBalance() - transactionTransferInDto.getAmount());
+                        sourceBankAccount.setBalance(sourceBankAccount.getBalance().subtract(transactionTransferInDto.getAmount()));
                         bankAccountRepository.save(sourceBankAccount);
-                        destinationBankAccount.setBalance(destinationBankAccount.getBalance() + transactionTransferInDto.getAmount());
+                        destinationBankAccount.setBalance(destinationBankAccount.getBalance().add(transactionTransferInDto.getAmount()));
                         bankAccountRepository.save(destinationBankAccount);
                         transactionService.makeTransaction(transactionTransferStrategy,
                                 new TransactionTransferDto(transactionTransferInDto.getAmount(), sourceBankAccount, destinationBankAccount));

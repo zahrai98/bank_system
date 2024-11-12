@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Type;
@@ -24,27 +25,27 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(name = "transactions")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public class TransactionEntity {
     @Id
     @SequenceGenerator(name = "transaction_sequence", sequenceName = "transaction_sequence", allocationSize = 10)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "transaction_sequence")
     private Long id;
 
-    @Column(name = "amount")
-    private Integer amount;
+    @Column(name = "amount", nullable = false)
+    private BigDecimal amount;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
 //    @JdbcTypeCode(SqlTypes.ENUM)
     @JdbcType(PostgreSQLEnumJdbcType.class)
     @Enumerated(value = EnumType.STRING)
-    @Column(name = "transaction_type")
+    @Column(name = "transaction_type", nullable = false)
     private TransactionType transactionType;
 
     @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "transaction_action")
+    @Column(name = "transaction_action", nullable = false)
     @Enumerated(value = EnumType.STRING)
     private TransactionAction transactionAction;
 

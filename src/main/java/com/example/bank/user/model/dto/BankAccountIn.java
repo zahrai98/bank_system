@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,8 +28,7 @@ public class BankAccountIn {
             bankAccountEntity = new BankAccountEntity();
         }
         bankAccountEntity.setAccountNumber(this.accountNumber);
-        bankAccountEntity.setBalance(0);
-        bankAccountEntity.setCreatedAt(LocalDateTime.now());
+        bankAccountEntity.setBalance(BigDecimal.valueOf(0));
         return bankAccountEntity;
     }
 }

@@ -17,5 +17,5 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class TransactionInDto {
     @NotNull
-    private Integer amount;
+    private BigDecimal amount;
 }

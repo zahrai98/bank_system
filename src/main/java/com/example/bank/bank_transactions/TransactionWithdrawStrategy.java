@@ -33,10 +33,8 @@ public class TransactionWithdrawStrategy implements TransactionStrategy<Transact
         transaction.setTransactionAction(TransactionAction.DECREASE);
         transaction.setAmount(transactionData.getAmount());
         transaction.setAccount(transactionData.getSourceAccount());
-        transaction.setCreatedAt(LocalDateTime.now());
-        transactionRepository.save(transaction);
 
-        TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transaction,transactionData.getSourceAccount().getId(), TransactionStatus.CREATED);
+        TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transactionRepository.save(transaction), transactionData.getSourceAccount().getId(), TransactionStatus.CREATED);
         transactionsService.notifyObservers(logMessage);
 
     }

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 import java.math.BigDecimal;
@@ -27,14 +28,15 @@ public class BankAccountEntity {
     private Long id;
 
     @Column(name = "created_at")
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @Column(name = "account_number", unique = true)
     private String accountNumber;
 
     @Column(name = "balance", nullable = false)
-    @ColumnDefault("0")
-    private Integer balance;
+    @ColumnDefault("0.0")
+    private BigDecimal balance;
 
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")

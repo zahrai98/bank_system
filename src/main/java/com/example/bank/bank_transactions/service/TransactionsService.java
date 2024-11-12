@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 
@@ -25,7 +24,6 @@ import java.util.stream.Collectors;
 public class TransactionsService extends Subject {
 
     private final TransactionRepository transactionRepository;
-    private final ExecutorCallerService executorCallerService;
 
     @Transactional( propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
     public <T> void makeTransaction(TransactionStrategy<T> strategy, T transactionDto) {

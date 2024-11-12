@@ -43,7 +43,7 @@ public class UserOut {
     static class BankAccountOut {
         private Long accountId;
         private String accountNumber;
-        private Integer balance;
+        private BigDecimal balance;
 
         public BankAccountOut(BankAccountEntity bankAccountEntity) {
             if (bankAccountEntity != null) {

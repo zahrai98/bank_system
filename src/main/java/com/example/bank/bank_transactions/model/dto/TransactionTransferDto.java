@@ -9,13 +9,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Setter
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class TransactionTransferDto {
     @NotNull
-    private Integer amount;
+    private BigDecimal amount;
     private BankAccountEntity sourceAccount;
     private BankAccountEntity destinationAccount;
 }

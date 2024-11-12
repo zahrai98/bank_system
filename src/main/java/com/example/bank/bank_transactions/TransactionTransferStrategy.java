@@ -33,21 +33,17 @@ public class TransactionTransferStrategy implements TransactionStrategy<Transact
         decreaseTransaction.setTransactionAction(TransactionAction.DECREASE);
         decreaseTransaction.setAmount(transactionData.getAmount());
         decreaseTransaction.setAccount(transactionData.getSourceAccount());
-        decreaseTransaction.setCreatedAt(LocalDateTime.now());
-        transactionRepository.save(decreaseTransaction);
 
         TransactionEntity increaseTransaction = new TransactionEntity();
         increaseTransaction.setTransactionType(TransactionType.TRANSFER);
         increaseTransaction.setTransactionAction(TransactionAction.INCREASE);
         increaseTransaction.setAmount(transactionData.getAmount());
         increaseTransaction.setAccount(transactionData.getDestinationAccount());
-        increaseTransaction.setCreatedAt(LocalDateTime.now());
-        transactionRepository.save(increaseTransaction);
 
-        TransactionLoggerMessageDto decreaseLogMessage = new TransactionLoggerMessageDto(decreaseTransaction, transactionData.getSourceAccount().getId(), TransactionStatus.CREATED);
+        TransactionLoggerMessageDto decreaseLogMessage = new TransactionLoggerMessageDto(transactionRepository.save(decreaseTransaction), transactionData.getSourceAccount().getId(), TransactionStatus.CREATED);
         transactionsService.notifyObservers(decreaseLogMessage);
 
-        TransactionLoggerMessageDto increaseLogMessage = new TransactionLoggerMessageDto(increaseTransaction, transactionData.getDestinationAccount().getId(), TransactionStatus.CREATED);
+        TransactionLoggerMessageDto increaseLogMessage = new TransactionLoggerMessageDto(transactionRepository.save(increaseTransaction), transactionData.getDestinationAccount().getId(), TransactionStatus.CREATED);
         transactionsService.notifyObservers(increaseLogMessage);
     }
 

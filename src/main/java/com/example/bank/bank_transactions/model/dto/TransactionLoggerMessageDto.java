@@ -22,7 +22,7 @@ public class TransactionLoggerMessageDto {
     private Long accountId;
     private TransactionAction transactionAction;
     private TransactionType transactionType;
-    private Integer amount;
+    private BigDecimal amount;
     private LocalDateTime createdAt;
     private TransactionStatus transactionStatus;
 
@@ -37,7 +37,7 @@ public class TransactionLoggerMessageDto {
     }
 
     public TransactionLoggerMessageDto(Long accountId, TransactionAction transactionAction,
-                                       TransactionType transactionType, Integer amount, LocalDateTime createdAt,
+                                       TransactionType transactionType, BigDecimal amount, LocalDateTime createdAt,
                                        TransactionStatus transactionStatus) {
         this.accountId = accountId;
         this.transactionAction = transactionAction;

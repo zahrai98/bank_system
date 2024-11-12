@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Setter
 public class TransactionOutDto {
     private LocalDateTime createdAt;
-    private Integer amount;
+    private BigDecimal amount;
     private TransactionAction transactionAction;
     private TransactionType transactionType;
 

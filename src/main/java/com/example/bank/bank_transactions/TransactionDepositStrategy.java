@@ -11,8 +11,6 @@ import com.example.bank.bank_transactions.service.TransactionsService;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.concurrent.Callable;
 
 public class TransactionDepositStrategy implements TransactionStrategy<TransactionDepositDto> {
 
@@ -32,10 +30,8 @@ public class TransactionDepositStrategy implements TransactionStrategy<Transacti
         transaction.setTransactionAction(TransactionAction.INCREASE);
         transaction.setAmount(transactionData.getAmount());
         transaction.setAccount(transactionData.getDestinationAccount());
-        transaction.setCreatedAt(LocalDateTime.now());
-        transactionRepository.save(transaction);
 
-        TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transaction,transactionData.getDestinationAccount().getId(), TransactionStatus.CREATED);
+        TransactionLoggerMessageDto logMessage = new TransactionLoggerMessageDto(transactionRepository.save(transaction),transactionData.getDestinationAccount().getId(), TransactionStatus.CREATED);
         transactionsService.notifyObservers(logMessage);
     }
 
